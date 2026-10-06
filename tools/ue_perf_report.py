@@ -214,10 +214,42 @@ def report_csv(cap, out, top_n):
         out.append("Упор по кадрам (доля кадров): " +
                    ", ".join(f"{k} {v:.0f}%" for k, v in shares.items()) + "\n")
 
+    report_thread_work(cap, out)
     report_hitches(core, out)
     for group in DETAIL_GROUPS:
         report_group(cap, group, out, top_n)
     return medians
+
+
+def report_thread_work(cap, out):
+    """Время потоков без ожиданий (EventWait*): сколько CPU реально работает."""
+    rows = []
+    for thread, label in (("GameThread", "Game"), ("RenderThread", "Draw (Render)")):
+        prefix = f"Exclusive/{thread}/"
+        names = [h for h in cap.header if h.startswith(prefix)]
+        if not names:
+            continue
+        n = len(cap.columns[names[0]])
+        total = [0.0] * n
+        waits = [0.0] * n
+        for h in names:
+            is_wait = "/EventWait" in h[len(prefix) - 1:]
+            for i, v in enumerate(cap.columns[h]):
+                if v is None:
+                    continue
+                total[i] += v
+                if is_wait:
+                    waits[i] += v
+        work = sorted(t - w for t, w in zip(total, waits))
+        rows.append((label, statistics.fmean(total), statistics.fmean(waits),
+                     statistics.fmean(work), percentile(work, 95)))
+    if not rows:
+        return
+    out.append("### Потоки CPU: работа и ожидание (ms, по Exclusive-статам)\n")
+    out.append("| Поток | Всего | Ожидание (EventWait) | Работа | Работа P95 |\n|---|---|---|---|---|")
+    for label, tot, w, work, p95 in rows:
+        out.append(f"| {label} | {fmt(tot)} | {fmt(w)} | {fmt(work)} | {fmt(p95)} |")
+    out.append("\nЕсли «Работа» намного меньше Frame, поток не узкое место — он ждёт GPU или другой поток.\n")
 
 
 def report_hitches(core, out):
@@ -379,6 +411,11 @@ def report_log(path, out, min_ms):
             m = rx.search(line)
             if m:
                 hw[label] = m.group(1).strip()
+    adapters = {m.group(1): m.group(2).strip() for l in lines
+                for m in [re.search(r"Found D3D12 adapter (\d+): (.*?) \(VendorId", l)] if m}
+    chosen = [m.group(1) for l in lines for m in [re.search(r"Chosen D3D12 Adapter Id = (\d+)", l)] if m]
+    if chosen and chosen[0] in adapters:
+        hw["Выбранная видеокарта (рендер)"] = adapters[chosen[0]]
     monitors = sorted({m.group(1) for l in lines for m in [re.search(r"LogWindows:\s+resolution: (\d+x\d+)", l)] if m})
     if monitors:
         hw["Мониторы"] = ", ".join(monitors)
