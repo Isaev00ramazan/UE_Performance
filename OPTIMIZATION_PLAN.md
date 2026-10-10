@@ -109,7 +109,7 @@ RTX 3050 Laptop медленнее RTX 3090 примерно в **3.2× на п�
 
 | # | Задача | Экономия | Быстрая проверка |
 |---|---|---|---|
-| T1 | DLSS: для режимов Quality/Balanced/Performance выставить **Preset E (CNN)** вместо K. Project Settings → NVIDIA DLSS. Сравнить качество картинки | 1.0–1.5 | замер до/после |
+| T1 | DLSS: обновить плагин **8.4.0 → 8.8.0** (в 8.4.0 Preset E удалён, вернули в 8.7.0; с 8.6.0 DLSS надо включать явно через `UDLSSLibrary::EnableDLSS`), затем для RTX 20/30 выставить **Preset E (CNN)** вместо K. Сравнить качество картинки | 1.0–1.5 | замер до/после |
 | T2 | Выключить матовое преломление: `r.Refraction.Blur=0` в Project Settings, если нигде не нужно размытие сквозь прозрачное | 0.4–0.5 | `r.Refraction.Blur 0` |
 | T3 | `M_UnderOcean_PostProcess` включать **только когда камера под водой** (Blend Weight / Enabled у PP-volume или blendable) | 0.35 | отключить volume в редакторе |
 | T4 | `M_PP_BoatRace`: Blendable Location → *Before Tonemapping*, тогда материал считается в разрешении рендера (в 2.25× меньше пикселей). Проверить, что картинка не меняется | 0.15 | — |
